@@ -1,6 +1,6 @@
 name: dio_log_interceptor
 description: "A new Flutter dio log interceptor"
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/andfaraway/dio_log_interceptor
 
 environment:
