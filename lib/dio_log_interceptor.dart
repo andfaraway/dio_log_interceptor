@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_log_utils/flutter_log_utils.dart';
+export 'package:flutter_log_utils/flutter_log_utils.dart';
 
 class DioLogInterceptor extends Interceptor {
   final Map<String, dynamic> apisMap;
@@ -48,7 +49,7 @@ class DioLogInterceptor extends Interceptor {
     if (options.queryParameters.isNotEmpty) {
       Log.n(options.queryParameters, tag: 'queryParameters');
     }
-    if (options.queryParameters.isNotEmpty) {
+    if (options.data.isNotEmpty) {
       Log.n(data, tag: 'data');
     }
     Log.line(tag: 'end', spaceLine: 1);
