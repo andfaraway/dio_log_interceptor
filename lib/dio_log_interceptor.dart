@@ -1,12 +1,15 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:fconsole/fconsole.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_log_utils/flutter_log_utils.dart';
-export 'package:flutter_log_utils/flutter_log_utils.dart';
 
 class DioLogInterceptor extends Interceptor {
   final Map<String, dynamic> apisMap;
   final Iterable<String> hideKeys;
   final bool showRequestHeader;
   final bool responseExpand;
+  final bool showLogWidget;
 
   Map<String, dynamic> _transFormMap = {};
 
@@ -22,21 +25,33 @@ class DioLogInterceptor extends Interceptor {
     this.hideKeys = const [],
     this.showRequestHeader = false,
     this.responseExpand = false,
+    this.showLogWidget = true,
   }) : super();
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    dynamic data;
+    if (showLogWidget == false && kDebugMode == false) {
+      handler.next(options);
+      return;
+    }
+
+    Map<String,dynamic> data = {};
     if (options.data is Map) {
       options.extra['tag'] = DateTime.now().millisecondsSinceEpoch;
       data = Map.from(options.data).cast<String, dynamic>();
       for (var key in hideKeys) {
-        (data as Map).remove(key);
+        data.remove(key);
       }
       data = dealWithData(data);
     }
 
-    String path = transFormMap[options.path] == null ? '' : '${transFormMap[options.path]} => ';
+    String path = getTransformPath(options);
+
+    if (showLogWidget) {
+      final logger = getLogFlow(options: options, path: path);
+      logger.log('开始请求:\n${options.headers}');
+      logger.log(data);
+    }
 
     Log.line(tag: 'start');
     Log.n(
@@ -49,26 +64,30 @@ class DioLogInterceptor extends Interceptor {
     if (options.queryParameters.isNotEmpty) {
       Log.n(options.queryParameters, tag: 'queryParameters');
     }
-    if (options.data.isNotEmpty) {
+    if (data.isNotEmpty) {
       Log.n(data, tag: 'data');
     }
     Log.line(tag: 'end', spaceLine: 1);
-    super.onRequest(options, handler);
+
+    handler.next(options);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    dynamic data;
-    if (response.requestOptions.data is Map) {
-      data = Map.from(response.requestOptions.data).cast<String, dynamic>();
-      for (var key in hideKeys) {
-        (data as Map).remove(key);
-      }
-      data = dealWithData(data);
+    if (showLogWidget == false && kDebugMode == false) {
+      handler.next(response);
+      return;
     }
 
     dynamic responseData;
-    if (response.data is Map) {
+
+    if (response.data is String || response.data is Map) {
+      if(response.data is String){
+        try {
+          response.data = json.decode(response.data);
+        } catch (_) {}
+      }
+
       responseData = Map.from(response.data).cast<String, dynamic>();
       dynamic temp = responseData['data'];
       if (temp != null) {
@@ -76,15 +95,21 @@ class DioLogInterceptor extends Interceptor {
           responseData['data'] = dealWithData(temp.cast<String, dynamic>());
         } else if (temp is String) {
           if (temp.length > 200) {
-            temp = '${temp.substring(0, 50)}...long data';
+            temp = '${temp.substring(0, 200)}...(long data)';
           }
           responseData['data'] = temp;
         }
       }
     }
 
-    String path =
-    transFormMap[response.requestOptions.path] == null ? '' : '${transFormMap[response.requestOptions.path]} => ';
+    String path = getTransformPath(response.requestOptions);
+
+    if (showLogWidget) {
+      final logger = getLogFlow(options: response.requestOptions, path: path);
+      logger.log('请求结束: ${response.statusCode}');
+      logger.log(responseData);
+      logger.end();
+    }
 
     Log.line(tag: 'start');
     Log.n(
@@ -98,8 +123,22 @@ class DioLogInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    Log.n('${err.requestOptions.path}=>${err.type}', tag: 'error ❌');
+    String path = getTransformPath(err.requestOptions);
+
+    if (showLogWidget) {
+      final logger = getLogFlow(options: err.requestOptions, path: path);
+      logger.error('请求错误');
+      logger.error('$err');
+      logger.end();
+    }
+
+    Log.n('$path${err.requestOptions.path}=>${err.type}', tag: 'error ❌');
     super.onError(err, handler);
+  }
+
+  String getTransformPath(RequestOptions options) {
+    String path = transFormMap[options.path] == null ? '' : '${transFormMap[options.path]} => ';
+    return path;
   }
 
   Map<String, dynamic> dealWithData(Map<String, dynamic> data) {
@@ -110,7 +149,7 @@ class DioLogInterceptor extends Interceptor {
       if (item.value is String) {
         String value = item.value;
         if (value.length > 200) {
-          value = '${item.value.substring(0, 50)}...long data';
+          value = '${item.value.substring(0, 200)}...(long data)';
         }
         temp['${transFormMap[item.key]}-${item.key}'] = value;
         continue;
@@ -118,9 +157,9 @@ class DioLogInterceptor extends Interceptor {
       if (item.value is Map) {
         temp['${item.key}-${transFormMap[item.key]}'] = dealWithData(item.value);
       }
-      if (item.value is List){
+      if (item.value is List) {
         List l = [];
-        for(Map map in item.value){
+        for (Map map in item.value) {
           l.add(dealWithData(map.cast<String, dynamic>()));
         }
         temp['${item.key}-${transFormMap[item.key]}'] = l;
@@ -145,5 +184,16 @@ class DioLogInterceptor extends Interceptor {
       }
     }
     return temp;
+  }
+
+  FlowLog getLogFlow({
+    required RequestOptions options,
+    required String path,
+  }) {
+    var logger = FlowLog.ofNameAndId(
+      '$path[${options.method}]\n${options.path}',
+      id: '${options.hashCode}',
+    );
+    return logger;
   }
 }

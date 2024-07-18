@@ -9,3 +9,7 @@
 ## 0.0.4
 
 * Bug fix.
+
+## 0.0.5
+
+* Add log widget.
