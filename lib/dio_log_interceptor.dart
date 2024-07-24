@@ -35,7 +35,7 @@ class DioLogInterceptor extends Interceptor {
       return;
     }
 
-    Map<String,dynamic> data = {};
+    Map<String, dynamic> data = {};
     if (options.data is Map) {
       options.extra['tag'] = DateTime.now().millisecondsSinceEpoch;
       data = Map.from(options.data).cast<String, dynamic>();
@@ -82,13 +82,14 @@ class DioLogInterceptor extends Interceptor {
     dynamic responseData;
 
     if (response.data is String || response.data is Map) {
-      if(response.data is String){
+      if (response.data is String) {
         try {
           response.data = json.decode(response.data);
         } catch (_) {}
       }
 
       responseData = Map.from(response.data).cast<String, dynamic>();
+
       dynamic temp = responseData['data'];
       if (temp != null) {
         if (temp is Map) {
@@ -146,23 +147,23 @@ class DioLogInterceptor extends Interceptor {
 
     Map<String, dynamic> temp = {};
     for (final item in data.entries) {
-      if (item.value is String) {
-        String value = item.value;
-        if (value.length > 200) {
-          value = '${item.value.substring(0, 200)}...(long data)';
-        }
-        temp['${transFormMap[item.key]}-${item.key}'] = value;
-        continue;
-      }
       if (item.value is Map) {
         temp['${item.key}-${transFormMap[item.key]}'] = dealWithData(item.value);
-      }
-      if (item.value is List) {
+      } else if (item.value is List) {
         List l = [];
         for (Map map in item.value) {
           l.add(dealWithData(map.cast<String, dynamic>()));
         }
         temp['${item.key}-${transFormMap[item.key]}'] = l;
+      } else {
+        dynamic value = item.value;
+        if(item.value is String){
+          if (item.value.length > 200) {
+            value = '${item.value.substring(0, 200)}...(long data)';
+          }
+        }
+        temp['${transFormMap[item.key]}-${item.key}'] = value;
+        continue;
       }
     }
     return temp;

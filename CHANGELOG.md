@@ -13,3 +13,7 @@
 ## 0.0.5
 
 * Add log widget.
+
+## 0.0.6
+
+* fix: Bug fix.
