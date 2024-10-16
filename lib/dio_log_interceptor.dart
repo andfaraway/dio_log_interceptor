@@ -13,20 +13,11 @@ class DioLogInterceptor extends Interceptor {
 
   Map<String, dynamic> _transFormMap = {};
 
-  String getTransFormKey(String? key) {
+  Map<String, dynamic> get transFormMap {
     if (_transFormMap.isEmpty) {
       _transFormMap = dealWithMap(apisMap);
     }
-    if(key == null && _transFormMap.isEmpty){
-      return 'null';
-    }
-
-    String? temp = _transFormMap[key];
-    if(temp == null){
-      return key ?? '';
-    }else{
-      return '$temp-$key';
-    }
+    return _transFormMap;
   }
 
   final Map<String, dynamic> _hideMap = {};
@@ -51,7 +42,7 @@ class DioLogInterceptor extends Interceptor {
       options.extra['tag'] = DateTime.now().millisecondsSinceEpoch;
       data = Map.from(options.data).cast<String, dynamic>();
       for (var key in hideKeys) {
-        _hideMap[getTransFormKey(key)] = data[key];
+        _hideMap[transFormMap[key]] = data[key];
         data.remove(key);
       }
       data = dealWithData(data);
@@ -62,7 +53,13 @@ class DioLogInterceptor extends Interceptor {
     if (showLogWidget) {
       final logger = getLogFlow(options: options, path: path);
       logger.log('开始请求:\n${options.headers}');
-      logger.log(data);
+
+      if(options.data is FormData){
+        FormData formData = options.data;
+        logger.log(formData.fields);
+      }else{
+        logger.log(data);
+      }
     }
 
     Log.line(tag: 'start');
@@ -153,27 +150,23 @@ class DioLogInterceptor extends Interceptor {
   }
 
   String getTransformPath(RequestOptions options) {
-    String key = getTransFormKey(options.path).split('-').firstOrNull ?? '';
-    if(key.isNotEmpty){
-      key = '$key => ';
-    }
-    return key;
+    String path = transFormMap[options.path] == null ? '' : '${transFormMap[options.path]} => ';
+    return path;
   }
 
   Map<String, dynamic> dealWithData(Map<String, dynamic> data) {
-    if (getTransFormKey(null) == 'null') return data;
+    if (transFormMap.isEmpty) return data;
 
     Map<String, dynamic> temp = {};
     for (final item in data.entries) {
-      String afterKey = getTransFormKey(item.key);
       if (item.value is Map) {
-        temp[afterKey] = dealWithData(item.value);
+        temp['${transFormMap[item.key]}-${item.key}'] = dealWithData(item.value);
       } else if (item.value is List) {
         List l = [];
         for (Map map in item.value) {
           l.add(dealWithData(map.cast<String, dynamic>()));
         }
-        temp[afterKey] = l;
+        temp['${transFormMap[item.key]}-${item.key}'] = l;
       } else {
         dynamic value = item.value;
         if(item.value is String){
@@ -181,7 +174,7 @@ class DioLogInterceptor extends Interceptor {
             value = '${item.value.substring(0, 200)}...(long data)';
           }
         }
-        temp[afterKey] = value;
+        temp['${transFormMap[item.key]}-${item.key}'] = value;
         continue;
       }
     }
