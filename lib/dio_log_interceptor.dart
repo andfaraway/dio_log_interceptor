@@ -108,6 +108,12 @@ class DioLogInterceptor extends Interceptor {
             temp = '${temp.substring(0, 200)}...(long data)';
           }
           responseData['data'] = temp;
+        }else if (temp is List) {
+          List<Map<String,dynamic>> l = [];
+          for(Map<String,dynamic> dic in temp){
+            l.add(dealWithData(dic));
+          }
+          responseData['data'] = l;
         }
       }
     }
