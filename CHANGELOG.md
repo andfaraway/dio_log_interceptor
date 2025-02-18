@@ -25,3 +25,7 @@
 ## 0.0.8
 
 * fix: Bug fix.
+
+## 0.0.9
+
+* fix: Bug fix.

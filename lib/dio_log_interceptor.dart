@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:fconsole/fconsole.dart';
 import 'package:flutter/foundation.dart';
@@ -20,8 +21,6 @@ class DioLogInterceptor extends Interceptor {
     return _transFormMap;
   }
 
-  final Map<String, dynamic> _hideMap = {};
-
   DioLogInterceptor({
     this.apisMap = const {},
     this.hideKeys = const [],
@@ -42,7 +41,6 @@ class DioLogInterceptor extends Interceptor {
       options.extra['tag'] = DateTime.now().millisecondsSinceEpoch;
       data = Map.from(options.data).cast<String, dynamic>();
       for (var key in hideKeys) {
-        _hideMap[transFormMap[key]] = data[key];
         data.remove(key);
       }
       data = dealWithData(data);
@@ -52,12 +50,11 @@ class DioLogInterceptor extends Interceptor {
 
     if (showLogWidget) {
       final logger = getLogFlow(options: options, path: path);
-      logger.log('开始请求:\n${options.headers}');
-
-      if(options.data is FormData){
+      if (options.data is FormData) {
         FormData formData = options.data;
         logger.log(formData.fields);
-      }else{
+      } else {
+        logger.log('请求开始:');
         logger.log(data);
       }
     }
@@ -108,12 +105,6 @@ class DioLogInterceptor extends Interceptor {
             temp = '${temp.substring(0, 200)}...(long data)';
           }
           responseData['data'] = temp;
-        }else if (temp is List) {
-          List<Map<String,dynamic>> l = [];
-          for(Map<String,dynamic> dic in temp){
-            l.add(dealWithData(dic));
-          }
-          responseData['data'] = l;
         }
       }
     }
@@ -125,8 +116,10 @@ class DioLogInterceptor extends Interceptor {
       logger.log('请求结束: ${response.statusCode}');
       logger.log(responseData);
 
-      logger.log('全局参数');
-      logger.log(_hideMap);
+      logger.log('Request Header');
+      logger.log(response.requestOptions.headers);
+      logger.log('Request Data');
+      logger.log(response.requestOptions.data);
       logger.end();
     }
 
@@ -148,6 +141,11 @@ class DioLogInterceptor extends Interceptor {
       final logger = getLogFlow(options: err.requestOptions, path: path);
       logger.error('请求错误');
       logger.error('$err');
+
+      logger.log('Request Header');
+      logger.log(err.requestOptions.headers);
+      logger.log('Request Data');
+      logger.log(err.requestOptions.data);
       logger.end();
     }
 
@@ -175,7 +173,7 @@ class DioLogInterceptor extends Interceptor {
         temp['${transFormMap[item.key]}-${item.key}'] = l;
       } else {
         dynamic value = item.value;
-        if(item.value is String){
+        if (item.value is String) {
           if (item.value.length > 200) {
             value = '${item.value.substring(0, 200)}...(long data)';
           }
