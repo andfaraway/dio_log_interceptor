@@ -38,7 +38,7 @@ class DioLogInterceptor extends Interceptor {
 
     Map<String, dynamic> data = {};
     if (options.data is Map) {
-      options.extra['tag'] = DateTime.now().millisecondsSinceEpoch;
+      options.extra['tag'] = DateTime.now().millisecondsSinceEpoch + options.hashCode;
       data = Map.from(options.data).cast<String, dynamic>();
       for (var key in hideKeys) {
         data.remove(key);
