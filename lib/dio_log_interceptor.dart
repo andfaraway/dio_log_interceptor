@@ -11,12 +11,13 @@ class DioLogInterceptor extends Interceptor {
   final bool showRequestHeader;
   final bool responseExpand;
   final bool showLogWidget;
+  final Map<String, dynamic>? singleMap;
 
   Map<String, dynamic> _transFormMap = {};
 
   Map<String, dynamic> get transFormMap {
     if (_transFormMap.isEmpty) {
-      _transFormMap = dealWithMap(apisMap);
+      _transFormMap = singleMap ?? dealWithMap(apisMap);
     }
     return _transFormMap;
   }
@@ -27,6 +28,7 @@ class DioLogInterceptor extends Interceptor {
     this.showRequestHeader = false,
     this.responseExpand = false,
     this.showLogWidget = true,
+    this.singleMap,
   }) : super();
 
   @override
