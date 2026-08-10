@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:fconsole/fconsole.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_log_utils/flutter_log_utils.dart';
+import 'package:flutter/material.dart';
 
 class DioLogInterceptor extends Interceptor {
   final Map<String, dynamic> apisMap;
@@ -163,28 +164,35 @@ class DioLogInterceptor extends Interceptor {
   Map<String, dynamic> dealWithData(Map<String, dynamic> data) {
     if (transFormMap.isEmpty) return data;
 
-    Map<String, dynamic> temp = {};
-    for (final item in data.entries) {
-      if (item.value is Map) {
-        temp['${transFormMap[item.key]}-${item.key}'] = dealWithData(item.value);
-      } else if (item.value is List) {
-        List l = [];
-        for (Map map in item.value) {
-          l.add(dealWithData(map.cast<String, dynamic>()));
-        }
-        temp['${transFormMap[item.key]}-${item.key}'] = l;
-      } else {
-        dynamic value = item.value;
-        if (item.value is String) {
-          if (item.value.length > 200) {
-            value = '${item.value.substring(0, 200)}...(long data)';
+    try {
+      Map<String, dynamic> temp = {};
+      for (final item in data.entries) {
+        final key = transFormMap[item.key] == null
+            ? item.key
+            : '${transFormMap[item.key]}-${item.key}';
+        if (item.value is Map) {
+          temp[key] = dealWithData(item.value);
+        } else if (item.value is List) {
+          List l = [];
+          for (Map map in item.value) {
+            l.add(dealWithData(map.cast<String, dynamic>()));
           }
+          temp[key] = l;
+        } else {
+          dynamic value = item.value;
+          if (item.value is String) {
+            if (item.value.length > 200) {
+              value = '${item.value.substring(0, 200)}...(long data)';
+            }
+          }
+          temp[key] = value;
+          continue;
         }
-        temp['${transFormMap[item.key]}-${item.key}'] = value;
-        continue;
       }
+      return temp;
+    } catch (_) {
+      return data;
     }
-    return temp;
   }
 
   Map<String, dynamic> dealWithMap(Map<String, dynamic> map, [String superKey = '']) {
@@ -214,5 +222,14 @@ class DioLogInterceptor extends Interceptor {
       id: '${options.hashCode}',
     );
     return logger;
+  }
+
+  static void runAppWithConsole(
+      Widget app, {
+        Future Function()? beforeRun,
+        FConsoleCardDelegate? delegate,
+        ErrHandler? errHandler,
+      }){
+    runAppWithFConsole(app);
   }
 }
