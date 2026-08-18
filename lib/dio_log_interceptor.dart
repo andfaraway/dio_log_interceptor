@@ -167,9 +167,7 @@ class DioLogInterceptor extends Interceptor {
     try {
       Map<String, dynamic> temp = {};
       for (final item in data.entries) {
-        final key = transFormMap[item.key] == null
-            ? item.key
-            : '${transFormMap[item.key]}-${item.key}';
+        final key = transFormMap[item.key] == null ? item.key : '${transFormMap[item.key]}-${item.key}';
         if (item.value is Map) {
           temp[key] = dealWithData(item.value);
         } else if (item.value is List) {
@@ -225,11 +223,11 @@ class DioLogInterceptor extends Interceptor {
   }
 
   static void runAppWithConsole(
-      Widget app, {
-        Future Function()? beforeRun,
-        FConsoleCardDelegate? delegate,
-        ErrHandler? errHandler,
-      }){
-    runAppWithFConsole(app);
+    Widget app, {
+    Future Function()? beforeRun,
+    FConsoleCardDelegate? delegate,
+    ErrHandler? errHandler,
+  }) {
+    runAppWithFConsole(SizedBox.expand(child: app), beforeRun: beforeRun, delegate: delegate, errHandler: errHandler);
   }
 }
